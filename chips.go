@@ -9,7 +9,7 @@ type MobileChip struct {
 	FriendlyName string
 }
 
-// Source https://github.com/torvalds/linux/blob/fd179f8a05be3ccae366b9b96e176b51fbe54aab/include/dt-bindings/arm/qcom%2Cids.h
+// Source for some IDs: https://github.com/torvalds/linux/blob/fd179f8a05be3ccae366b9b96e176b51fbe54aab/include/dt-bindings/arm/qcom%2Cids.h
 func GetMobileChips() []MobileChip {
 	var mobileChips []MobileChip
 	// Adreno 850 (8 Elite Extreme Gen 6 / SM8975)
@@ -25,12 +25,15 @@ func GetMobileChips() []MobileChip {
 	mobileChips = append(mobileChips, MobileChip{SocID: 603, SocName: "kalama", SocModel: "QCS8550"}) // Confirmed from Ayn Thor
 	mobileChips = append(mobileChips, MobileChip{SocID: 604, SocName: "kalama", SocModel: "QCM8550"})
 	// Adreno 730
-	mobileChips = append(mobileChips, MobileChip{SocID: 457, SocName: "taro", SocModel: "SM8450"}) // Confirmed in Motorola Edge Plus 2022
+	mobileChips = append(mobileChips, MobileChip{SocID: 457, SocName: "taro", SocModel: "SM8450"}) // Confirmed from Motorola Edge Plus 2022
 	// Adreno 722
 	mobileChips = append(mobileChips, MobileChip{SocID: 731, SocName: "eliza", SocModel: "CQ7790M"})
 	mobileChips = append(mobileChips, MobileChip{SocID: 732, SocName: "eliza", SocModel: "CQ7790S"})
 	// Adreno 650
 	mobileChips = append(mobileChips, MobileChip{SocID: 356, SocName: "kona", SocModel: "SM8250"})
+
+	mobileChips = append(mobileChips, MobileChip{SocID: 444, SocName: "bengal", SocModel: "SM6115", GPU: "Adreno 610", FriendlyName: "Snapdragon 662"})
+	mobileChips = append(mobileChips, MobileChip{SocID: 568, SocName: "parrot", SocModel: "SM4450", GPU: "Adreno 613", FriendlyName: "Snapdragon 4 Gen 2 "})
 
 	for i := range mobileChips {
 		switch mobileChips[i].SocName {

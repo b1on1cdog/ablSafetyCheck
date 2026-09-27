@@ -9,12 +9,13 @@ import (
 )
 
 // replace "output.txt" to "/sdcard/rocknix_abl/output.txt" in production
+const outputLogFile = "output.txt"
 
 // func oprint(soc string, format string, a ...any) {
 func oprint(format string, a ...any) {
 	s := fmt.Sprintf(format, a...)
 	fmt.Print(s)
-	f, err := os.OpenFile("output.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	f, err := os.OpenFile(outputLogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err == nil {
 		f.Write([]byte(s))
 		f.Close()
@@ -25,6 +26,11 @@ func oprint(format string, a ...any) {
 func backup() {
 	ablA := exec.Command("dd", "if=/dev/block/by-name/abl_a", `of="/sdcard/rocknix_abl/abl_a.img"`, "bs=1M")
 	ablB := exec.Command("dd", "if=/dev/block/by-name/abl_b", `of="/sdcard/rocknix_abl/abl_b.img"`, "bs=1M")
+}
+
+
+func flash(){
+
 }
 */
 
@@ -67,7 +73,7 @@ func main() {
 	}
 
 	oprint("Chipset verified : %v (%v)\n", chip.SocModel, chip.FriendlyName)
-	f, ferr := os.OpenFile("output.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	f, ferr := os.OpenFile(outputLogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 
 	cmd := exec.Command(shellScript)
 	if ferr == nil {
