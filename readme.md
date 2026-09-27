@@ -17,8 +17,8 @@ create flash_abl.sh, with the next content:<br>
 ```
 
 # Considerations
-- Using a shared ablSafetyCheck (/sdcard/rocknix_abl/ablSafetyCheck) instead of a copy per SoC can save near 15mb of space<br>
+- Using a shared ablSafetyCheck (ex: /sdcard/rocknix_abl/ablSafetyCheck) instead of a copy per SoC can save near 15mb of space<br>
 - If desired, the flashing code can be easily embedded into the binary to avoid having a UNSAFE_flash_abl.sh per SoC folder<br/>
 - This code was compiled and tested from ADB Shell, i didn't actually try to flash something with it<br/>
-- Having UNSAFE_flash_abl.sh in a different dir than flash_abl.sh might be a good idea, so user does not accidentally bypass the protection<br/>
+- Having UNSAFE_flash_abl.sh in a different dir than flash_abl.sh might be a good idea, so user does not accidentally bypass the protection by chosing the wrong script<br/>
 - The reason why "chips.go" is more complex than it should is because is a copy-paste from another library i'm writing<br/>
