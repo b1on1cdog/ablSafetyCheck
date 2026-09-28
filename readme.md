@@ -4,6 +4,7 @@ Android ablSafetyCheck binary PoC<br>
 - Support "flash", "backup", "verify" and "restore" commands<br>
 - SoC verification (to prevent accidental mismatched abl flash)<br>
 - pre-restore and post-restore checksum verification<br>
+- backup include .sha256 files to confirm long term integrity<br>
 - Stdout and Stderr goes to /sdcard/rocknix_abl/output.txt<br>
 - Written by a human, no LLMs involved<br>
 
@@ -25,3 +26,4 @@ GOARCH=arm64 GOOS=linux go build -o scripts/abl/ablScTool
     - /sdcard/rocknix_abl/restore_abl.sh<br>
     - /sdcard/rocknix_abl/abl/<br>
     - /sdcard/rocknix_abl/backup/<br>
+- launch the scripts from "Run script as root" from your handheld settings<br>
