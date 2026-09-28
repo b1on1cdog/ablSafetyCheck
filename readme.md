@@ -9,7 +9,7 @@ Android ablSafetyCheck binary PoC<br>
 
 ## Disclaimer
 > [!WARNING]
-> Flashing a custom ABL modifies a critical component of your device's boot process.
+> Flashing a custom ABL modifies a critical component of your device's boot process.<br>
 > The authors of this project are not responsible for damage, data loss, or other issues resulting from its use.
 
 # Compile
