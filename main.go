@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -35,14 +36,26 @@ func ablBackup() {
 	ablA := exec.Command("dd", "if=/dev/block/by-name/abl_a", "of="+ABL_A_Backup, "bs=1M")
 	ablB := exec.Command("dd", "if=/dev/block/by-name/abl_b", "of="+ABL_B_Backup, "bs=1M")
 	if ferr == nil {
+		defer f.Close()
 		ablA.Stdout, ablA.Stderr, ablB.Stdout, ablB.Stderr = f, f, f, f
 	}
 	err := ablA.Run()
 	if err != nil {
-		oprint("abl backup error : %v\n", err)
+		oprint("abl_a backup error : %v\n", err)
 		return
 	}
-	ablB.Run()
+	err2 := ablB.Run()
+	if err2 == nil {
+		oprint("abl_b backup error : %v\n", err)
+	}
+	hashA, errA := checksumFile(ABL_A_Backup)
+	hashB, errB := checksumFile(ABL_B_Backup)
+	hashAF := hashA + " " + filepath.Base(ABL_A_Backup)
+	hashBF := hashB + " " + filepath.Base(ABL_B_Backup)
+	if errA == nil && errB == nil {
+		os.WriteFile(hashAF, []byte(hashA), 0644)
+		os.WriteFile(hashBF, []byte(hashB), 0644)
+	}
 }
 
 // untested
@@ -58,6 +71,21 @@ func ablRestore() {
 	ablB.Run()
 }
 
+func checksumFile(filepath string) (string, error) {
+	file, err := os.Open(filepath)
+	if err != nil {
+		oprint("Unable to open %v : %v\n", filepath, err)
+		return "", err
+	}
+
+	h := sha256.New()
+	if _, err := io.Copy(h, file); err != nil {
+		oprint("Unable to calculate file hash: %v\n", err)
+		return "", err
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
+}
+
 func verifyFile(filepath string) bool {
 	checksumPath := filepath + ".sha256"
 	checksumData, cerr := os.ReadFile(checksumPath)
@@ -67,17 +95,11 @@ func verifyFile(filepath string) bool {
 	}
 	expectedHash := strings.Split(string(checksumData), " ")[0]
 
-	file, err := os.Open(filepath)
+	currentHash, err := checksumFile(filepath)
 	if err != nil {
-		oprint("Unable to open %v : %v\n", filepath, err)
 		return false
 	}
 
-	h := sha256.New()
-	if _, err := io.Copy(h, file); err != nil {
-		oprint("Unable to calculate file hash: %v\n", err)
-	}
-	currentHash := hex.EncodeToString(h.Sum(nil))
 	if strings.EqualFold(currentHash, expectedHash) {
 		oprint("%v : checksum OK\n", filepath)
 		return true

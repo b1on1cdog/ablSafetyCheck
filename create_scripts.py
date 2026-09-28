@@ -12,8 +12,10 @@ abl_script = [
     "CMD",
     "rm /data/local/tmp/ablSafetyCheck"]
 
+os.makedirs("scripts/flash_abl", exist_ok=True)
+
 for soc in socs:
-    script_name = f"scripts/flash_abl_{soc}.sh"
+    script_name = f"scripts/flash_abl/{soc}.sh"
     try:
         os.remove(script_name)
     except OSError:
