@@ -14,9 +14,8 @@ import (
 
 const (
 	outputLogFile = "/sdcard/rocknix_abl/output.txt"
-	//outputLogFileAlt = "/sdcard/rocknix_abl/output_dd.txt"
-	ABL_A_Backup = "/sdcard/rocknix_abl/backup/abl_a.img"
-	ABL_B_Backup = "/sdcard/rocknix_abl/backup/abl_b.img"
+	ABL_A_Backup  = "/sdcard/rocknix_abl/backup/abl_a.img"
+	ABL_B_Backup  = "/sdcard/rocknix_abl/backup/abl_b.img"
 )
 
 func oprint(format string, a ...any) {
@@ -36,7 +35,6 @@ func ternary(cond bool, str1 string, str2 string) string {
 	return str2
 }
 
-// /system/bin/dd
 // to-do: create a zip so user can just drop a single file
 func ablBackup() {
 	oprint("abl_backup: starting...\n")
@@ -201,7 +199,6 @@ func ablFlash(soc string) {
 	}
 	f, ferr := os.OpenFile(outputLogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 
-	//ablElf := fmt.Sprintf("/sdcard/rocknix_abl/%v/abl_signed-%v.elf", soc, soc)
 	ablElf := fmt.Sprintf("/sdcard/rocknix_abl/abl/abl_signed-%v.elf", soc)
 	if !verifyFile(ablElf) {
 		oprint("Aborting operation, unable to confirm %v integrity..\n", ablElf)
@@ -253,7 +250,6 @@ func main() {
 	expectedChip := args[1]
 	shellScript := args[2]
 	ignoreChipset := expectedChip == "ANY"
-	//unknownChipset := false
 
 	var chip MobileChip
 	for i := range chips {
@@ -266,7 +262,6 @@ func main() {
 	if chip == (MobileChip{}) {
 		oprint("Unable to find MobileChip for SocID : %v, some operations are unavailable\n", socID)
 		ignoreChipset = true
-		//unknownChipset = true
 	}
 
 	if chip.SocModel != expectedChip && !ignoreChipset {

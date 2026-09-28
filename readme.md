@@ -16,7 +16,6 @@ Android ablSafetyCheck binary PoC<br>
 At the time of writing this, "restore" command is untested<br>
 
 # Usage
-
 - Copy rocknix_abl files to scripts/abl/<br>
 - run: <br>
 ```
