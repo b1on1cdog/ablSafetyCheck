@@ -14,7 +14,7 @@ Android ablSafetyCheck binary PoC<br>
 
 # Compile
 ```
-GOARCH=arm64 GOOS=linux go build -o scripts/ablSafetycheck
+GOARCH=arm64 GOOS=linux go build -o scripts/abl/ablScTool
 ```
 <br>
 
@@ -25,4 +25,3 @@ GOARCH=arm64 GOOS=linux go build -o scripts/ablSafetycheck
     - /sdcard/rocknix_abl/restore_abl.sh<br>
     - /sdcard/rocknix_abl/abl/<br>
     - /sdcard/rocknix_abl/backup/<br>
-    - /sdcard/rocknix_abl/ablSafetycheck<br>

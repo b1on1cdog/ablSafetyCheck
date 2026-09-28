@@ -3,17 +3,19 @@ import os
 
 BACKUP_FILENAME = "scripts/backup_abl.sh"
 RESTORE_FILENAME = "scripts/restore_abl.sh"
+BINARY_NAME = "ablScTool"
 
 socs = ["SM4450", "SM6115", "SM8250", "SM8550", "SM8650", "SM8750"]
 abl_script = [
     "#!/bin/sh",
-    "cat /sdcard/rocknix_abl/ablSafetyCheck > /data/local/tmp/ablSafetyCheck",
-    "chmod 777 /data/local/tmp/ablSafetyCheck",
+    f"cat /sdcard/rocknix_abl/abl/{BINARY_NAME} > /data/local/tmp/{BINARY_NAME}",
+    f"chmod 777 /data/local/tmp/{BINARY_NAME}",
     "CMD",
-    "rm /data/local/tmp/ablSafetyCheck"]
+    f"rm /data/local/tmp/{BINARY_NAME}"]
 
 os.makedirs("scripts/flash_abl", exist_ok=True)
 os.makedirs("scripts/backup", exist_ok=True)
+os.makedirs("scripts/abl", exist_ok=True)
 
 for soc in socs:
     script_name = f"scripts/flash_abl/{soc}.sh"
@@ -22,7 +24,7 @@ for soc in socs:
     except OSError:
         pass
     flash_abl = abl_script
-    flash_abl[3] = f"/data/local/tmp/ablSafetyCheck {soc} flash"
+    flash_abl[3] = f"/data/local/tmp/{BINARY_NAME} {soc} flash"
     with open(script_name, "a", encoding="utf-8") as f:
         for flash_line in flash_abl:
             f.write(flash_line + "\n")
@@ -30,8 +32,8 @@ for soc in socs:
 backup_script = abl_script
 restore_script = abl_script
 
-backup_script[3] = "/data/local/tmp/ablSafetyCheck ANY backup"
-restore_script[3] = "/data/local/tmp/ablSafetyCheck ANY restore"
+backup_script[3] = f"/data/local/tmp/{BINARY_NAME} ANY backup"
+restore_script[3] = f"/data/local/tmp/{BINARY_NAME} ANY restore"
 try:
     os.remove(BACKUP_FILENAME)
 except OSError:
