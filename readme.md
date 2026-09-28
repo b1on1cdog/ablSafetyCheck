@@ -13,7 +13,7 @@ Android ablSafetyCheck binary PoC<br>
 > Flashing a custom ABL modifies a critical component of your device's boot process.<br>
 > The authors of this project are not responsible for damage, data loss, or other issues resulting from its use.<br>
 
-At the time of writing this, "restore" and "flash" commands are untested<br>
+At the time of writing this, "restore" command is untested<br>
 
 # Usage
 
