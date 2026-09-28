@@ -76,11 +76,16 @@ func ablBackup() {
 }
 
 // untested
-// to-do: add checksum verification before flashing
 func ablRestore() {
+	oprint("abl_restore: running untested function\n")
 	oprint("abl_restore: starting...\n")
-	//hashA, _ := checksumFile(ABL_A_Backup)
-	//hashB, _ := checksumFile(ABL_B_Backup)
+
+	// user might place backups without checksum, so i'll deliberately allow the process to continue
+	hashA, a1h := checksumFile(ABL_A_Backup)
+	hashB, a2h := checksumFile(ABL_B_Backup)
+
+	verifyFile(ABL_A_Backup)
+	verifyFile(ABL_B_Backup)
 
 	f, ferr := os.OpenFile(outputLogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	ablA := exec.Command("dd", "if="+ABL_A_Backup, "of=/dev/block/by-name/abl_a", "bs=1M")
@@ -94,11 +99,12 @@ func ablRestore() {
 		f.Close()
 	}
 
-	//hashAS, _ := checksumFile("/dev/block/by-name/abl_a")
-	//hashBS, _ := checksumFile("/dev/block/by-name/abl_b")
-	//oprint("abl_a checksum : %v\n", ternary(hashA == hashAS, "OK", "FAIL"))
-	//oprint("abl_b checksum : %v\n", ternary(hashB == hashBS, "OK", "FAIL"))
-
+	if a1h == nil && a2h == nil {
+		hashAS, _ := checksumFile("/dev/block/by-name/abl_a")
+		hashBS, _ := checksumFile("/dev/block/by-name/abl_b")
+		oprint("abl_restore abl_a checksum : %v (%v)\n", ternary(hashA == hashAS, "OK", "FAIL"), hashAS)
+		oprint("abl_restore abl_b checksum : %v (%v)\n", ternary(hashB == hashBS, "OK", "FAIL"), hashBS)
+	}
 	oprint("abl_restore : %v\n", ternary(e1 == nil && e2 == nil, "success", "error"))
 }
 
@@ -140,7 +146,7 @@ func verifyFile(filepath string) bool {
 	checksumPath := filepath + ".sha256"
 	checksumData, cerr := os.ReadFile(checksumPath)
 	if cerr != nil {
-		oprint("Unable to read %v checksum file : %v\n", checksumPath, cerr)
+		oprint("verify_file: unable to read %v checksum file : %v\n", checksumPath, cerr)
 		return false
 	}
 	expectedHash := strings.Split(string(checksumData), " ")[0]
@@ -159,6 +165,10 @@ func verifyFile(filepath string) bool {
 }
 
 func verifyAbl(soc string) bool {
+	if len(soc) < 3 {
+		oprint("verify_abl error : Missing SoC\n")
+		return false
+	}
 	ablElf := fmt.Sprintf("/sdcard/rocknix_abl/abl/abl_signed-%v.elf", soc)
 	felf, err := os.Open(ablElf)
 	if err == nil {
@@ -185,6 +195,10 @@ func verifyAbl(soc string) bool {
 
 func ablFlash(soc string) {
 	oprint("abl_flash: starting...\n")
+	if len(soc) < 3 || soc == "ANY" {
+		oprint("abl_flash error : Missing SoC, aborting...\n")
+		return
+	}
 	f, ferr := os.OpenFile(outputLogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 
 	//ablElf := fmt.Sprintf("/sdcard/rocknix_abl/%v/abl_signed-%v.elf", soc, soc)
@@ -239,6 +253,7 @@ func main() {
 	expectedChip := args[1]
 	shellScript := args[2]
 	ignoreChipset := expectedChip == "ANY"
+	//unknownChipset := false
 
 	var chip MobileChip
 	for i := range chips {
@@ -251,6 +266,7 @@ func main() {
 	if chip == (MobileChip{}) {
 		oprint("Unable to find MobileChip for SocID : %v, some operations are unavailable\n", socID)
 		ignoreChipset = true
+		//unknownChipset = true
 	}
 
 	if chip.SocModel != expectedChip && !ignoreChipset {
@@ -268,6 +284,8 @@ func main() {
 			oprint("Chipset verification is off, aborting....\n")
 			return
 		}
+		// We would normally use chip.SocModel, but in order to avoid a control flow issue
+		// from dropping the wrong one, i'll prioritize the parameter
 		ablFlash(expectedChip)
 		return
 	case "backup":
