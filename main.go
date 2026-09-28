@@ -29,7 +29,7 @@ func oprint(format string, a ...any) {
 }
 
 // /system/bin/dd
-// to-do: create .sha256 files for the backups, and create a zip
+// to-do: create .sha256 files for the backups, and create a zip so user can just drop a single file
 func ablBackup() {
 	f, ferr := os.OpenFile(outputLogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	ablA := exec.Command("dd", "if=/dev/block/by-name/abl_a", "of="+ABL_A_Backup, "bs=1M")
@@ -131,6 +131,7 @@ func main() {
 
 	expectedChip := args[1]
 	shellScript := args[2]
+	ignoreChipset := expectedChip == "ANY"
 
 	var chip MobileChip
 	for i := range chips {
@@ -140,14 +141,26 @@ func main() {
 		}
 	}
 
-	if chip.SocModel != expectedChip {
+	if chip == (MobileChip{}) {
+		oprint("Unable to find MobileChip for SocID : %v, some operations are unavailable\n", socID)
+		ignoreChipset = true
+	}
+
+	if chip.SocModel != expectedChip && !ignoreChipset {
 		oprint("Wrong chip (running : %v, expected : %v)\n", chip.SocModel, expectedChip)
 		return
 	}
 
-	oprint("Chipset verified : %v (%v)\n", chip.SocModel, chip.FriendlyName)
+	if !ignoreChipset {
+		oprint("Chipset verified : %v (%v)\n", chip.SocModel, chip.FriendlyName)
+	}
+
 	switch strings.ToLower(shellScript) {
 	case "flash":
+		if ignoreChipset {
+			oprint("Chipset verification is off, aborting....\n")
+			return
+		}
 		ablFlash(expectedChip)
 		return
 	case "backup":

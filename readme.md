@@ -16,10 +16,3 @@ GOARCH=arm64 GOOS=linux go build -o ablSafetycheck
 #!/bin/sh
 /sdcard/rocknix_abl/SM8550/ablSafetyCheck SM8550 /sdcard/rocknix_abl/SM8550/UNSAFE_flash_abl.sh
 ```
-
-# Considerations
-- Using a shared ablSafetyCheck (ex: /sdcard/rocknix_abl/ablSafetyCheck) instead of a copy per SoC can save near 15mb of space<br>
-- If desired, the flashing code can be easily embedded into the binary to avoid having a UNSAFE_flash_abl.sh per SoC folder<br/>
-- This code was tested from ADB Shell, i didn't actually try to flash something with it (it's a PoC afterall)<br/>
-- Having UNSAFE_flash_abl.sh in a different dir than flash_abl.sh might be a good idea, so user does not accidentally bypass the protection by chosing the wrong script<br/>
-- The reason why "chips.go" is more complex than it should is because is a copy-paste from another library i'm writing<br/>
