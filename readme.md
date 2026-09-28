@@ -3,7 +3,7 @@ Android ablSafetyCheck binary PoC<br>
 # Features
 - Support "flash", "backup", "verify" and "restore" commands<br>
 - SoC verification (to prevent accidental mismatched abl flash)<br>
-- pre-flash checksum verification<br>
+- pre-flash and post-flash checksum verification<br>
 - backup include .sha256 files to confirm long term integrity<br>
 - Stdout and Stderr goes to /sdcard/rocknix_abl/output.txt<br>
 - Written by a human, no LLMs involved<br>

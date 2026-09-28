@@ -79,6 +79,9 @@ func ablBackup() {
 // to-do: add checksum verification before flashing
 func ablRestore() {
 	oprint("abl_restore: starting...\n")
+	//hashA, _ := checksumFile(ABL_A_Backup)
+	//hashB, _ := checksumFile(ABL_B_Backup)
+
 	f, ferr := os.OpenFile(outputLogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	ablA := exec.Command("dd", "if="+ABL_A_Backup, "of=/dev/block/by-name/abl_a", "bs=1M")
 	ablB := exec.Command("dd", "if="+ABL_B_Backup, "of=/dev/block/by-name/abl_b", "bs=1M")
@@ -90,6 +93,12 @@ func ablRestore() {
 	if ferr == nil {
 		f.Close()
 	}
+
+	//hashAS, _ := checksumFile("/dev/block/by-name/abl_a")
+	//hashBS, _ := checksumFile("/dev/block/by-name/abl_b")
+	//oprint("abl_a checksum : %v\n", ternary(hashA == hashAS, "OK", "FAIL"))
+	//oprint("abl_b checksum : %v\n", ternary(hashB == hashBS, "OK", "FAIL"))
+
 	oprint("abl_restore : %v\n", ternary(e1 == nil && e2 == nil, "success", "error"))
 }
 
@@ -105,6 +114,25 @@ func checksumFile(filepath string) (string, error) {
 		oprint("Unable to calculate file hash: %v\n", err)
 		return "", err
 	}
+	return hex.EncodeToString(h.Sum(nil)), nil
+}
+
+func checksumFileWithLength(filepath string, bytesToRead int64) (string, error) {
+	file, err := os.Open(filepath)
+	if err != nil {
+		oprint("Unable to open %v : %v\n", filepath, err)
+		return "", err
+	}
+
+	buf := make([]byte, bytesToRead)
+
+	_, err = file.Read(buf)
+	if err != nil {
+		oprint("Unable to allocate %v : %v\n", filepath, err)
+		return "", err
+	}
+	h := sha256.New()
+	h.Write(buf)
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
@@ -127,6 +155,31 @@ func verifyFile(filepath string) bool {
 		return true
 	}
 	oprint("%v : checksum FAIL (value: %v, expected: %v)\n", filepath, currentHash, expectedHash)
+	return false
+}
+
+func verifyAbl(soc string) bool {
+	ablElf := fmt.Sprintf("/sdcard/rocknix_abl/abl/abl_signed-%v.elf", soc)
+	felf, err := os.Open(ablElf)
+	if err == nil {
+		fi, err := felf.Stat()
+		if err == nil {
+			h1, e1 := checksumFileWithLength("/dev/block/by-name/abl_a", fi.Size())
+			h2, e2 := checksumFileWithLength("/dev/block/by-name/abl_b", fi.Size())
+			ablSum, _ := checksumFile(ablElf)
+
+			if e1 != nil || e2 != nil {
+				oprint("verify_abl error: (abl_a : %v | abl_b : %v )\n", e1, e2)
+				return false
+			}
+			oprint("verify_abl abl_a checksum : %v (%v)\n", ternary(h1 == ablSum, "OK", "FAIL"), h1)
+			oprint("verify_abl abl_b checksum : %v (%v)\n", ternary(h2 == ablSum, "OK", "FAIL"), h2)
+			return true
+		}
+		oprint("verify_abl error : %v\n", err)
+		return false
+	}
+	oprint("verify_abl error : %v\n", err)
 	return false
 }
 
@@ -156,18 +209,8 @@ func ablFlash(soc string) {
 		oprint("abl_flash error: (abl_a: %v | abl_b: %v)\n", e1, e2)
 		return
 	}
-	// to-do: get ablElf filesize and only compare that specific portion to device abl
-	/*
-		h1, e1 := checksumFile("/dev/block/by-name/abl_a")
-		h2, e2 := checksumFile("/dev/block/by-name/abl_b")
-		ablSum, _ := checksumFile(ablElf)
-		if e1 != nil || e2 != nil {
-			oprint("abl_flash: error\n")
-			return
-		}
-		oprint("abl_a dst checksum : %v\n", ternary(h1 == ablSum, "OK", "FAIL"))
-		oprint("abl_b dst checksum : %v\n", ternary(h2 == ablSum, "OK", "FAIL"))
-	*/
+	verifyAbl(soc)
+
 	oprint("abl_flash: success\n")
 }
 
@@ -234,8 +277,18 @@ func main() {
 		ablRestore()
 		return
 	case "verify":
-		//		verifyFile(fmt.Sprintf("/sdcard/rocknix_abl/%v/abl_signed-%v.elf", chip.SocModel, chip.SocModel))
+		if ignoreChipset {
+			oprint("Chipset verification is off, aborting....\n")
+			return
+		}
 		verifyFile(fmt.Sprintf("/sdcard/rocknix_abl/abl/abl_signed-%v.elf", chip.SocModel))
+		return
+	case "verify_abl":
+		if ignoreChipset {
+			oprint("Chipset verification is off, aborting....\n")
+			return
+		}
+		verifyAbl(chip.SocModel)
 		return
 	}
 
