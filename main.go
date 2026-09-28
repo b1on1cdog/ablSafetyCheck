@@ -14,11 +14,11 @@ import (
 
 const (
 	outputLogFile = "/sdcard/rocknix_abl/output.txt"
-	ABL_A_Backup  = "/sdcard/rocknix_abl/backup/abl_a.img"
-	ABL_B_Backup  = "/sdcard/rocknix_abl/backup/abl_b.img"
+	//outputLogFileAlt = "/sdcard/rocknix_abl/output_dd.txt"
+	ABL_A_Backup = "/sdcard/rocknix_abl/backup/abl_a.img"
+	ABL_B_Backup = "/sdcard/rocknix_abl/backup/abl_b.img"
 )
 
-// func oprint(soc string, format string, a ...any) {
 func oprint(format string, a ...any) {
 	s := fmt.Sprintf(format, a...)
 	fmt.Print(s)
@@ -39,23 +39,26 @@ func ternary(cond bool, str1 string, str2 string) string {
 // /system/bin/dd
 // to-do: create a zip so user can just drop a single file
 func ablBackup() {
+	oprint("abl_backup: starting...\n")
 	f, ferr := os.OpenFile(outputLogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	ablA := exec.Command("dd", "if=/dev/block/by-name/abl_a", "of="+ABL_A_Backup, "bs=1M")
 	ablB := exec.Command("dd", "if=/dev/block/by-name/abl_b", "of="+ABL_B_Backup, "bs=1M")
+
 	if ferr == nil {
-		defer f.Close()
 		ablA.Stdout, ablA.Stderr, ablB.Stdout, ablB.Stderr = f, f, f, f
 	}
-	err := ablA.Run()
-	if err != nil {
-		oprint("abl_a backup error : %v\n", err)
+	e1 := ablA.Run()
+	e2 := ablB.Run()
+
+	if ferr == nil {
+		f.Close()
+	}
+	if e1 != nil || e2 != nil {
+		oprint("abl_backup error : (abl_a : %v | abl_b : %v)\n", e1, e2)
 		return
 	}
-	err2 := ablB.Run()
-	if err2 == nil {
-		oprint("abl_b backup error : %v\n", err)
-		return
-	}
+
+	oprint("abl_backup: creating checksum files...\n")
 	hashA, errA := checksumFile(ABL_A_Backup)
 	hashB, errB := checksumFile(ABL_B_Backup)
 
@@ -66,8 +69,8 @@ func ablBackup() {
 	oprint("abl_b checksum : %v\n", ternary(hashB == hashBS, "OK", "FAIL"))
 
 	if errA == nil && errB == nil {
-		os.WriteFile(ABL_A_Backup+".sha256", []byte(hashA+" "+filepath.Base(ABL_A_Backup)), 0644)
-		os.WriteFile(ABL_B_Backup+".sha256", []byte(hashB+" "+filepath.Base(ABL_B_Backup)), 0644)
+		os.WriteFile(ABL_A_Backup+".sha256", []byte(hashA+"  "+filepath.Base(ABL_A_Backup)), 0644)
+		os.WriteFile(ABL_B_Backup+".sha256", []byte(hashB+"  "+filepath.Base(ABL_B_Backup)), 0644)
 	}
 	oprint("abl_backup: success\n")
 }
@@ -75,19 +78,19 @@ func ablBackup() {
 // untested
 // to-do: add checksum verification before flashing
 func ablRestore() {
+	oprint("abl_restore: starting...\n")
 	f, ferr := os.OpenFile(outputLogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	ablA := exec.Command("dd", "if="+ABL_A_Backup, "of=/dev/block/by-name/abl_a", "bs=1M")
 	ablB := exec.Command("dd", "if="+ABL_B_Backup, "of=/dev/block/by-name/abl_b", "bs=1M")
 	if ferr == nil {
-		defer f.Close()
 		ablA.Stdout, ablA.Stderr, ablB.Stdout, ablB.Stderr = f, f, f, f
 	}
 	e1 := ablA.Run()
 	e2 := ablB.Run()
-	if e1 != nil || e2 != nil {
-
+	if ferr == nil {
+		f.Close()
 	}
-	oprint("ablRestore : %v\n", ternary(e1 == nil && e2 == nil, "success", "error"))
+	oprint("abl_restore : %v\n", ternary(e1 == nil && e2 == nil, "success", "error"))
 }
 
 func checksumFile(filepath string) (string, error) {
@@ -127,40 +130,44 @@ func verifyFile(filepath string) bool {
 	return false
 }
 
-// untested
 func ablFlash(soc string) {
+	oprint("abl_flash: starting...\n")
 	f, ferr := os.OpenFile(outputLogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 
 	//ablElf := fmt.Sprintf("/sdcard/rocknix_abl/%v/abl_signed-%v.elf", soc, soc)
-	ablElf := fmt.Sprintf("/sdcard/rocknix_abl/abl_signed-%v.elf", soc)
+	ablElf := fmt.Sprintf("/sdcard/rocknix_abl/abl/abl_signed-%v.elf", soc)
 	if !verifyFile(ablElf) {
 		oprint("Aborting operation, unable to confirm %v integrity..\n", ablElf)
 		return
 	}
-	// dd if="/sdcard/rocknix_abl/SM8550/abl_signed-SM8550.elf" of=/dev/block/by-name/abl_a bs=1M
-	// dd if="/sdcard/rocknix_abl/SM8550/abl_signed-SM8550.elf" of=/dev/block/by-name/abl_b bs=1M
 	ablA := exec.Command("dd", "if="+ablElf, "of=/dev/block/by-name/abl_a", "bs=1M")
 	ablB := exec.Command("dd", "if="+ablElf, "of=/dev/block/by-name/abl_b", "bs=1M")
 	if ferr == nil {
 		ablA.Stdout, ablA.Stderr, ablB.Stdout, ablB.Stderr = f, f, f, f
-		defer f.Close()
 	}
 	e1 := ablA.Run()
 	e2 := ablB.Run()
-	if e1 != nil || e2 != nil {
-		oprint("abl_flash: error\n")
-		return
+
+	if ferr == nil {
+		f.Close()
 	}
 
-	h1, e1 := checksumFile("/dev/block/by-name/abl_a")
-	h2, e2 := checksumFile("/dev/block/by-name/abl_b")
-	ablSum, _ := checksumFile(ablElf)
 	if e1 != nil || e2 != nil {
-		oprint("abl_flash: error\n")
+		oprint("abl_flash error: (abl_a: %v | abl_b: %v)\n", e1, e2)
 		return
 	}
-	oprint("abl_a dst checksum : %v\n", ternary(h1 == ablSum, "OK", "FAIL"))
-	oprint("abl_b dst checksum : %v\n", ternary(h2 == ablSum, "OK", "FAIL"))
+	// to-do: get ablElf filesize and only compare that specific portion to device abl
+	/*
+		h1, e1 := checksumFile("/dev/block/by-name/abl_a")
+		h2, e2 := checksumFile("/dev/block/by-name/abl_b")
+		ablSum, _ := checksumFile(ablElf)
+		if e1 != nil || e2 != nil {
+			oprint("abl_flash: error\n")
+			return
+		}
+		oprint("abl_a dst checksum : %v\n", ternary(h1 == ablSum, "OK", "FAIL"))
+		oprint("abl_b dst checksum : %v\n", ternary(h2 == ablSum, "OK", "FAIL"))
+	*/
 	oprint("abl_flash: success\n")
 }
 
