@@ -71,6 +71,7 @@ func ablBackup() {
 		os.WriteFile(hashAF, []byte(hashA), 0644)
 		os.WriteFile(hashBF, []byte(hashB), 0644)
 	}
+	oprint("abl_backup: success\n")
 }
 
 // untested
@@ -141,8 +142,23 @@ func ablFlash(soc string) {
 		ablA.Stdout, ablA.Stderr, ablB.Stdout, ablB.Stderr = f, f, f, f
 		defer f.Close()
 	}
-	ablA.Run()
-	ablB.Run()
+	e1 := ablA.Run()
+	e2 := ablB.Run()
+	if e1 != nil || e2 != nil {
+		oprint("abl_flash: error\n")
+		return
+	}
+
+	h1, e1 := checksumFile("/dev/block/by-name/abl_a")
+	h2, e2 := checksumFile("/dev/block/by-name/abl_b")
+	ablSum, _ := checksumFile(ablElf)
+	if e1 != nil || e2 != nil {
+		oprint("abl_flash: error\n")
+		return
+	}
+	oprint("abl_a dst checksum : %v\n", ternary(h1 == ablSum, "OK", "FAIL"))
+	oprint("abl_b dst checksum : %v\n", ternary(h2 == ablSum, "OK", "FAIL"))
+	oprint("abl_flash: success\n")
 }
 
 func main() {
@@ -204,7 +220,7 @@ func main() {
 	case "backup":
 		ablBackup()
 		return
-	case "restorebackup":
+	case "restore":
 		ablRestore()
 		return
 	case "verify":
