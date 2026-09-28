@@ -29,8 +29,15 @@ func oprint(format string, a ...any) {
 	}
 }
 
+func ternary(cond bool, str1 string, str2 string) string {
+	if cond {
+		return str1
+	}
+	return str2
+}
+
 // /system/bin/dd
-// to-do: create .sha256 files for the backups, and create a zip so user can just drop a single file
+// to-do: create a zip so user can just drop a single file
 func ablBackup() {
 	f, ferr := os.OpenFile(outputLogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	ablA := exec.Command("dd", "if=/dev/block/by-name/abl_a", "of="+ABL_A_Backup, "bs=1M")
@@ -47,9 +54,17 @@ func ablBackup() {
 	err2 := ablB.Run()
 	if err2 == nil {
 		oprint("abl_b backup error : %v\n", err)
+		return
 	}
 	hashA, errA := checksumFile(ABL_A_Backup)
 	hashB, errB := checksumFile(ABL_B_Backup)
+
+	hashAS, _ := checksumFile("/dev/block/by-name/abl_a")
+	hashBS, _ := checksumFile("/dev/block/by-name/abl_b")
+
+	oprint("abl_a checksum : %v\n", ternary(hashA == hashAS, "OK", "FAIL"))
+	oprint("abl_b checksum : %v\n", ternary(hashB == hashBS, "OK", "FAIL"))
+
 	hashAF := hashA + " " + filepath.Base(ABL_A_Backup)
 	hashBF := hashB + " " + filepath.Base(ABL_B_Backup)
 	if errA == nil && errB == nil {
@@ -59,6 +74,7 @@ func ablBackup() {
 }
 
 // untested
+// to-do: add checksum verification before flashing
 func ablRestore() {
 	f, ferr := os.OpenFile(outputLogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	ablA := exec.Command("dd", "if="+ABL_A_Backup, "of=/dev/block/by-name/abl_a", "bs=1M")
