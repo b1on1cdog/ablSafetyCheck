@@ -14,8 +14,8 @@ import (
 
 const (
 	outputLogFile = "/sdcard/rocknix_abl/output.txt"
-	ABL_A_Backup  = "/sdcard/rocknix_abl/abl_a.img"
-	ABL_B_Backup  = "/sdcard/rocknix_abl/abl_b.img"
+	ABL_A_Backup  = "/sdcard/rocknix_abl/backup/abl_a.img"
+	ABL_B_Backup  = "/sdcard/rocknix_abl/backup/abl_b.img"
 )
 
 // func oprint(soc string, format string, a ...any) {
@@ -65,11 +65,9 @@ func ablBackup() {
 	oprint("abl_a checksum : %v\n", ternary(hashA == hashAS, "OK", "FAIL"))
 	oprint("abl_b checksum : %v\n", ternary(hashB == hashBS, "OK", "FAIL"))
 
-	hashAF := hashA + " " + filepath.Base(ABL_A_Backup)
-	hashBF := hashB + " " + filepath.Base(ABL_B_Backup)
 	if errA == nil && errB == nil {
-		os.WriteFile(hashAF, []byte(hashA), 0644)
-		os.WriteFile(hashBF, []byte(hashB), 0644)
+		os.WriteFile(ABL_A_Backup+".sha256", []byte(hashA+" "+filepath.Base(ABL_A_Backup)), 0644)
+		os.WriteFile(ABL_B_Backup+".sha256", []byte(hashB+" "+filepath.Base(ABL_B_Backup)), 0644)
 	}
 	oprint("abl_backup: success\n")
 }
@@ -84,8 +82,12 @@ func ablRestore() {
 		defer f.Close()
 		ablA.Stdout, ablA.Stderr, ablB.Stdout, ablB.Stderr = f, f, f, f
 	}
-	ablA.Run()
-	ablB.Run()
+	e1 := ablA.Run()
+	e2 := ablB.Run()
+	if e1 != nil || e2 != nil {
+
+	}
+	oprint("ablRestore : %v\n", ternary(e1 == nil && e2 == nil, "success", "error"))
 }
 
 func checksumFile(filepath string) (string, error) {
@@ -129,7 +131,8 @@ func verifyFile(filepath string) bool {
 func ablFlash(soc string) {
 	f, ferr := os.OpenFile(outputLogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 
-	ablElf := fmt.Sprintf("/sdcard/rocknix_abl/%v/abl_signed-%v.elf", soc, soc)
+	//ablElf := fmt.Sprintf("/sdcard/rocknix_abl/%v/abl_signed-%v.elf", soc, soc)
+	ablElf := fmt.Sprintf("/sdcard/rocknix_abl/abl_signed-%v.elf", soc)
 	if !verifyFile(ablElf) {
 		oprint("Aborting operation, unable to confirm %v integrity..\n", ablElf)
 		return
@@ -224,7 +227,8 @@ func main() {
 		ablRestore()
 		return
 	case "verify":
-		verifyFile(fmt.Sprintf("/sdcard/rocknix_abl/%v/abl_signed-%v.elf", chip.SocModel, chip.SocModel))
+		//		verifyFile(fmt.Sprintf("/sdcard/rocknix_abl/%v/abl_signed-%v.elf", chip.SocModel, chip.SocModel))
+		verifyFile(fmt.Sprintf("/sdcard/rocknix_abl/abl/abl_signed-%v.elf", chip.SocModel))
 		return
 	}
 
@@ -233,8 +237,7 @@ func main() {
 	cmd := exec.Command(shellScript)
 	if ferr == nil {
 		defer f.Close()
-		cmd.Stdout = f
-		cmd.Stderr = f
+		cmd.Stdout, cmd.Stderr = f, f
 	}
 	cmd.Run()
 	oprint("Operation finished\n")

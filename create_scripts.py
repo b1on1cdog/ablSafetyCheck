@@ -13,6 +13,7 @@ abl_script = [
     "rm /data/local/tmp/ablSafetyCheck"]
 
 os.makedirs("scripts/flash_abl", exist_ok=True)
+os.makedirs("scripts/backup", exist_ok=True)
 
 for soc in socs:
     script_name = f"scripts/flash_abl/{soc}.sh"
