@@ -15,14 +15,14 @@ Android ablSafetyCheck binary PoC<br>
 
 At the time of writing this, "restore" and "flash" commands are untested<br>
 
-# Compile
+# Usage
+
+- Copy rocknix_abl files to scripts/abl/<br>
+- run: <br>
 ```
+python3 create_scripts.py
 GOARCH=arm64 GOOS=linux go build -o scripts/abl/ablScTool
 ```
-<br>
-
-# Usage
-- run create_scripts.py<br>
 - copy /scripts content to /sdcard/rocknix_abl/, content should look like: <br>
     - /sdcard/rocknix_abl/backup_abl.sh<br>
     - /sdcard/rocknix_abl/restore_abl.sh<br>
