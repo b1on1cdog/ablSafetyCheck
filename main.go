@@ -28,16 +28,32 @@ func oprint(format string, a ...any) {
 	}
 }
 
+// /system/bin/dd
+// to-do: create .sha256 files for the backups, and create a zip
 func ablBackup() {
-	ablA := exec.Command("dd", "if=/dev/block/by-name/abl_a", `of="`+ABL_A_Backup+`"`, "bs=1M")
-	ablB := exec.Command("dd", "if=/dev/block/by-name/abl_b", `of="`+ABL_B_Backup+`"`, "bs=1M")
-	ablA.Run()
+	f, ferr := os.OpenFile(outputLogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	ablA := exec.Command("dd", "if=/dev/block/by-name/abl_a", "of="+ABL_A_Backup, "bs=1M")
+	ablB := exec.Command("dd", "if=/dev/block/by-name/abl_b", "of="+ABL_B_Backup, "bs=1M")
+	if ferr == nil {
+		ablA.Stdout, ablA.Stderr, ablB.Stdout, ablB.Stderr = f, f, f, f
+	}
+	err := ablA.Run()
+	if err != nil {
+		oprint("abl backup error : %v\n", err)
+		return
+	}
 	ablB.Run()
 }
 
+// untested
 func ablRestore() {
-	ablA := exec.Command("dd", `if="`+ABL_A_Backup+`"`, "of=/dev/block/by-name/abl_a", "bs=1M")
-	ablB := exec.Command("dd", `if="`+ABL_B_Backup+`"`, "of=/dev/block/by-name/abl_b", "bs=1M")
+	f, ferr := os.OpenFile(outputLogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	ablA := exec.Command("dd", "if="+ABL_A_Backup, "of=/dev/block/by-name/abl_a", "bs=1M")
+	ablB := exec.Command("dd", "if="+ABL_B_Backup, "of=/dev/block/by-name/abl_b", "bs=1M")
+	if ferr == nil {
+		defer f.Close()
+		ablA.Stdout, ablA.Stderr, ablB.Stdout, ablB.Stderr = f, f, f, f
+	}
 	ablA.Run()
 	ablB.Run()
 }
@@ -49,7 +65,7 @@ func verifyFile(filepath string) bool {
 		oprint("Unable to read %v checksum file : %v\n", checksumPath, cerr)
 		return false
 	}
-	expectedHash := strings.ReplaceAll(string(checksumData), "\n", "")
+	expectedHash := strings.Split(string(checksumData), " ")[0]
 
 	file, err := os.Open(filepath)
 	if err != nil {
@@ -70,8 +86,7 @@ func verifyFile(filepath string) bool {
 	return false
 }
 
-// dd if="/sdcard/rocknix_abl/SM8550/abl_signed-SM8550.elf" of=/dev/block/by-name/abl_a bs=1M
-// dd if="/sdcard/rocknix_abl/SM8550/abl_signed-SM8550.elf" of=/dev/block/by-name/abl_b bs=1M
+// untested
 func ablFlash(soc string) {
 	f, ferr := os.OpenFile(outputLogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 
@@ -80,11 +95,13 @@ func ablFlash(soc string) {
 		oprint("Aborting operation, unable to confirm %v integrity..\n", ablElf)
 		return
 	}
-	//ablElfChecksum := ablElf + ".sha256"
-	ablA := exec.Command("dd", `if="`+ablElf+`"`, "of=/dev/block/by-name/abl_a", "bs=1M")
-	ablB := exec.Command("dd", `if="`+ablElf+`"`, "of=/dev/block/by-name/abl_b", "bs=1M")
+	// dd if="/sdcard/rocknix_abl/SM8550/abl_signed-SM8550.elf" of=/dev/block/by-name/abl_a bs=1M
+	// dd if="/sdcard/rocknix_abl/SM8550/abl_signed-SM8550.elf" of=/dev/block/by-name/abl_b bs=1M
+	ablA := exec.Command("dd", "if="+ablElf, "of=/dev/block/by-name/abl_a", "bs=1M")
+	ablB := exec.Command("dd", "if="+ablElf, "of=/dev/block/by-name/abl_b", "bs=1M")
 	if ferr == nil {
 		ablA.Stdout, ablA.Stderr, ablB.Stdout, ablB.Stderr = f, f, f, f
+		defer f.Close()
 	}
 	ablA.Run()
 	ablB.Run()
@@ -131,13 +148,16 @@ func main() {
 	oprint("Chipset verified : %v (%v)\n", chip.SocModel, chip.FriendlyName)
 	switch strings.ToLower(shellScript) {
 	case "flash":
-		//ablFlash(expectedChip)
+		ablFlash(expectedChip)
 		return
 	case "backup":
 		ablBackup()
 		return
 	case "restorebackup":
-		//ablRestore()
+		ablRestore()
+		return
+	case "verify":
+		verifyFile(fmt.Sprintf("/sdcard/rocknix_abl/%v/abl_signed-%v.elf", chip.SocModel, chip.SocModel))
 		return
 	}
 
@@ -149,7 +169,6 @@ func main() {
 		cmd.Stdout = f
 		cmd.Stderr = f
 	}
-	//cmd.Stdin = os.Stdin
 	cmd.Run()
 	oprint("Operation finished\n")
 }
